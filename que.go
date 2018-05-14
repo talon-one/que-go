@@ -34,6 +34,10 @@ type Job struct {
 	// Args must be the bytes of a valid JSON string
 	Args []byte
 
+	// Delay function returns the amount of seconds to wait as a function of
+	// the number of retries.
+	DelayFunction func(int32) int
+
 	// ErrorCount is the number of times this job has attempted to run, but
 	// failed with an error. It is ignored on job creation.
 	ErrorCount int32
@@ -53,6 +57,10 @@ type Job struct {
 // DelayFunction returns the amount of seconds to wait as a function of
 // the number of retries.
 var DelayFunction func(int32) int
+var defaultDelayFunction = func(errorCount int32) int {
+	return intPow(int(errorCount), 4) + 3
+}
+
 var defaultDelayFunction = func(errorCount int32) int {
 	return intPow(int(errorCount), 4) + 3
 }
