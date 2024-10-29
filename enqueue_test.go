@@ -1,10 +1,9 @@
 package que
 
 import (
+	"context"
 	"testing"
 	"time"
-
-	"github.com/jackc/pgx/pgtype"
 )
 
 func TestEnqueueOnlyType(t *testing.T) {
@@ -42,7 +41,7 @@ func TestEnqueueOnlyType(t *testing.T) {
 	if want := int32(0); j.ErrorCount != want {
 		t.Errorf("want ErrorCount=%d, got %d", want, j.ErrorCount)
 	}
-	if j.LastError.Status == pgtype.Present {
+	if j.LastError.Valid {
 		t.Errorf("want no LastError, got %v", j.LastError)
 	}
 }
@@ -138,11 +137,11 @@ func TestEnqueueInTx(t *testing.T) {
 	c := openTestClient(t)
 	defer truncateAndClose(c.pool)
 
-	tx, err := c.pool.Begin()
+	tx, err := c.pool.Begin(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback(context.Background()) //nolint:errcheck // no need to check error in defer
 
 	if err = c.EnqueueInTx(&Job{Type: "MyJob"}, tx); err != nil {
 		t.Fatal(err)
@@ -156,7 +155,7 @@ func TestEnqueueInTx(t *testing.T) {
 		t.Fatal("want job, got none")
 	}
 
-	if err = tx.Rollback(); err != nil {
+	if err = tx.Rollback(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 
